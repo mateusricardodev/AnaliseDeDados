@@ -1,0 +1,2527 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Análise da População Residente — SP</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --azul-escuro: #1a3557;
+      --azul-medio: #2a5298;
+      --azul-claro: #e8f0fa;
+      --dourado: #b8922a;
+      --cinza-texto: #3a3a3a;
+      --cinza-suave: #f5f5f3;
+      --borda: #d0d8e4;
+      --fonte-titulo: 'Playfair Display', serif;
+      --fonte-corpo: 'Source Sans 3', sans-serif;
+    }
+    body { background: #fff; font-family: var(--fonte-corpo); color: var(--cinza-texto); }
+ 
+    .barra-topo { background: var(--azul-escuro); height: 6px; }
+    .barra-gov { background: var(--azul-medio); padding: 8px 60px; display: flex; align-items: center; gap: 12px; }
+    .barra-gov span { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.85); letter-spacing: 0.04em; text-transform: uppercase; }
+    .barra-gov .sep { width: 1px; height: 14px; background: rgba(255,255,255,0.3); }
+    .barra-gov .linkedin-link {
+        margin-left: auto;
+        display: flex; align-items: center; gap: 6px;
+        color: rgba(255,255,255,0.75);
+        text-decoration: none;
+        font-size: 11px; font-weight: 500; letter-spacing: 0.04em;
+        transition: color 0.15s;
+    }
+    .barra-gov .linkedin-link:hover { color: #fff; }
+    .barra-gov .linkedin-link svg { width: 15px; height: 15px; fill: currentColor; }
+ 
+    .header { padding: 56px 60px 48px; border-bottom: 1px solid var(--borda); position: relative; }
+    .header::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: linear-gradient(to bottom, var(--azul-medio), var(--azul-escuro)); }
+    .header-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+    .tag { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--azul-medio); background: var(--azul-claro); padding: 4px 10px; border-radius: 3px; }
+    .tag-ano { font-size: 11px; font-weight: 500; color: #888; letter-spacing: 0.05em; }
+    .header h1 { font-family: var(--fonte-titulo); font-size: 32px; font-weight: 600; color: var(--azul-escuro); line-height: 1.3; max-width: 780px; margin-bottom: 8px; }
+    .header h1 em { font-style: italic; color: var(--dourado); }
+    .header-subtitulo { font-size: 15px; font-weight: 300; color: #666; margin-bottom: 32px; max-width: 680px; line-height: 1.5; }
+    .divider-ornamental { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+    .divider-ornamental .linha { height: 1px; background: var(--borda); flex: 1; max-width: 120px; }
+    .divider-ornamental .losango { width: 7px; height: 7px; background: var(--dourado); transform: rotate(45deg); }
+    .contexto-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--borda); border: 1px solid var(--borda); border-radius: 6px; overflow: hidden; max-width: 860px; }
+    .contexto-item { background: #fff; padding: 18px 22px; }
+    .contexto-item .rotulo { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #999; margin-bottom: 5px; }
+    .contexto-item .valor { font-size: 14px; font-weight: 500; color: var(--azul-escuro); line-height: 1.4; }
+ 
+    .descricao-section { padding: 44px 60px 40px; border-bottom: 1px solid var(--borda); }
+    .secao-titulo { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--azul-medio); margin-bottom: 14px; }
+    .descricao-texto { font-size: 15px; font-weight: 400; line-height: 1.8; color: #444; max-width: 740px; }
+    .destaque-inline { font-weight: 600; color: var(--azul-escuro); }
+
+    /* ── Resumo executivo ── */
+    .resumo-section { padding: 44px 60px; border-bottom: 1px solid var(--borda); background: var(--cinza-suave); }
+    .resumo-section .secao-titulo { margin-bottom: 20px; }
+    .resumo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .resumo-card {
+        background: #fff;
+        border: 1px solid var(--borda);
+        border-radius: 8px;
+        padding: 20px 22px 18px;
+        position: relative;
+        overflow: hidden;
+    }
+    .resumo-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+    }
+    .resumo-card.c-azul::before   { background: var(--azul-medio); }
+    .resumo-card.c-verde::before  { background: #1a8a4a; }
+    .resumo-card.c-dourado::before { background: var(--dourado); }
+    .resumo-card.c-alerta::before { background: #c0392b; }
+    .resumo-rotulo {
+        font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+        text-transform: uppercase; color: #999; margin-bottom: 8px;
+    }
+    .resumo-valor {
+        font-size: 26px; font-weight: 600; line-height: 1.1;
+        color: var(--azul-escuro); margin-bottom: 4px;
+    }
+    .resumo-card.c-alerta .resumo-valor { color: #c0392b; }
+    .resumo-detalhe {
+        font-size: 12px; color: #888; line-height: 1.4; margin-top: 6px;
+    }
+ 
+    /* ── Gráfico geral do estado ── */
+    .grafico-estado-section { padding: 44px 60px; border-bottom: 1px solid var(--borda); }
+    .grafico-estado-section .secao-titulo { margin-bottom: 6px; }
+    .grafico-estado-descricao { font-size: 13px; color: #888; margin-bottom: 24px; }
+    .grafico-estado-wrapper {
+        background: var(--cinza-suave);
+        border: 1px solid var(--borda);
+        border-radius: 8px;
+        padding: 28px 32px;
+        height: 320px;
+        position: relative;
+    }
+
+    /* ── Ranking ── */
+    .ranking-section { padding: 44px 60px; border-bottom: 1px solid var(--borda); }
+    .ranking-section .secao-titulo { margin-bottom: 6px; }
+    .ranking-descricao { font-size: 13px; color: #888; margin-bottom: 28px; }
+    .ranking-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 900px; }
+    .ranking-card { border: 1px solid var(--borda); border-radius: 8px; overflow: hidden; }
+    .ranking-card-header {
+        padding: 14px 20px;
+        font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .ranking-card-header.mais  { background: #eaf1fb; color: #1a3557; border-bottom: 1px solid var(--borda); }
+    .ranking-card-header.menos { background: #f3eefb; color: #5a3580; border-bottom: 1px solid var(--borda); }
+    .ranking-card-header .bolinha {
+        width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .mais  .bolinha { background: #1a3557; }
+    .menos .bolinha { background: #8e5bb5; }
+    table.rank-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    tr.rank-linha { border-bottom: 1px solid var(--borda); }
+    tr.rank-linha:last-child { border-bottom: none; }
+    tr.rank-linha:hover { background: var(--cinza-suave); }
+    td.rank-pos  { padding: 11px 14px; font-weight: 700; font-size: 13px; width: 36px; }
+    td.rank-nome { padding: 11px 8px; color: var(--cinza-texto); }
+    td.rank-total { padding: 11px 14px; text-align: right; font-family: monospace; font-size: 12px; color: #666; white-space: nowrap; }
+
+    /* ── Tabela ── */
+    .tabela-section { padding: 44px 60px 60px; }
+    .tabela-section .secao-titulo { margin-bottom: 20px; }
+    .tabela-wrapper { overflow-x: auto; border: 1px solid var(--borda); border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead tr { background: var(--azul-escuro); }
+    thead th { padding: 13px 14px; text-align: right; font-weight: 600; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: rgba(255,255,255,0.85); white-space: nowrap; }
+    thead th.col-codigo, thead th.col-nome { text-align: left; }
+ 
+    /* ── Linhas de dados (clicáveis) ── */
+    tr.linha-dados { border-bottom: 1px solid var(--borda); cursor: pointer; transition: background 0.15s; }
+    tr.linha-dados:hover { background: var(--azul-claro); }
+    tr.linha-dados.aberta { background: var(--azul-claro); border-bottom: none; }
+ 
+    td { padding: 11px 14px; color: var(--cinza-texto); text-align: right; }
+    td.col-codigo { font-family: monospace; font-size: 12px; color: #888; text-align: left; }
+    td.col-nome { text-align: left; font-weight: 500; color: var(--azul-escuro); min-width: 200px; }
+ 
+    /* ── Seta indicadora ── */
+    .nome-regiao { margin-right: 8px; }
+    .icone-seta { font-size: 9px; color: var(--azul-medio); display: inline-block; transition: transform 0.25s; opacity: 0.6; }
+    tr.linha-dados.aberta .icone-seta { transform: rotate(90deg); }
+ 
+    /* ── Linha do gráfico (oculta por padrão) ── */
+    tr.linha-grafico { display: none; background: #f0f5fc; border-bottom: 2px solid var(--azul-claro); }
+    tr.linha-grafico td { padding: 0; }
+    .grafico-container {
+        padding: 24px 40px 28px;
+        height: 260px;
+        overflow: hidden;
+    }
+    tr.linha-grafico.visivel { display: table-row; }
+ 
+    /* ── Índice de envelhecimento ── */
+    .badge-indice {
+        display: inline-block;
+        padding: 3px 9px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        font-family: monospace;
+        white-space: nowrap;
+    }
+    .badge-indice.normal { background: #e6f4ec; color: #1a6b3a; }
+    .badge-indice.alerta { background: #fdecea; color: #a0281e; }
+
+    /* ── Busca e ordenação ── */
+    .tabela-controles {
+        display: flex; align-items: center; gap: 12px;
+        margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .campo-busca {
+        display: flex; align-items: center; gap: 8px;
+        background: var(--cinza-suave); border: 1px solid var(--borda);
+        border-radius: 5px; padding: 8px 14px; flex: 1; max-width: 320px;
+        transition: border-color 0.15s;
+    }
+    .campo-busca:focus-within { border-color: var(--azul-medio); }
+    .campo-busca svg { width: 14px; height: 14px; color: #aaa; flex-shrink: 0; }
+    .campo-busca input {
+        border: none; background: transparent; outline: none;
+        font-family: var(--fonte-corpo); font-size: 13px; color: var(--cinza-texto);
+        width: 100%;
+    }
+    .campo-busca input::placeholder { color: #bbb; }
+    .sem-resultado {
+        text-align: center; padding: 32px; font-size: 13px;
+        color: #aaa; display: none;
+    }
+    thead th.ordenavel { cursor: pointer; user-select: none; }
+    thead th.ordenavel:hover { background: #243f6a; }
+    thead th .seta-ordem {
+        display: inline-block; margin-left: 5px; opacity: 0.4; font-size: 10px;
+    }
+    thead th.asc  .seta-ordem { opacity: 1; content: '▲'; }
+    thead th.desc .seta-ordem { opacity: 1; }
+
+    /* ── Botão exportar ── */
+    .btn-exportar {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: var(--azul-escuro); color: #fff;
+        border: none; border-radius: 5px; cursor: pointer;
+        font-family: var(--fonte-corpo); font-size: 12px; font-weight: 600;
+        letter-spacing: 0.05em; text-transform: uppercase;
+        padding: 9px 18px; margin-bottom: 16px;
+        transition: background 0.15s;
+    }
+    .btn-exportar:hover { background: var(--azul-medio); }
+    .btn-exportar svg { width: 14px; height: 14px; }
+ 
+    .rodape-tabela { margin-top: 12px; font-size: 11px; color: #aaa; letter-spacing: 0.03em; }
+    .legenda-indice { margin-top: 10px; font-size: 12px; color: #888; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .rodape-header { padding: 20px 60px; background: var(--cinza-suave); border-top: 1px solid var(--borda); display: flex; justify-content: space-between; align-items: center; }
+    .rodape-header span { font-size: 11px; color: #aaa; letter-spacing: 0.04em; }
+  </style>
+</head>
+<body>
+ 
+  <div class="barra-topo"></div>
+  <div class="barra-gov">
+    <span>Mateus Ricardo dos Santos</span>
+    <a class="linkedin-link" href="https://www.linkedin.com/in/mateus-ricardo" target="_blank">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+      </svg>
+      LinkedIn
+    </a>
+  </div>
+ 
+  <header class="header">
+    <div class="header-meta">
+      <span class="tag">Análise Demográfica</span>
+      <span class="tag-ano">Período: 2025</span>
+    </div>
+    <h1>Análise da População Residente por<br>
+    <em>Idade Simples</em> segundo Região de Saúde (CIR)</h1>
+    <p class="header-subtitulo">Estado de São Paulo — Estudo de Estimativas Populacionais por Município e Idade</p>
+    <div class="divider-ornamental">
+      <div class="linha"></div><div class="losango"></div><div class="linha"></div>
+    </div>
+    <div class="contexto-grid">
+      <div class="contexto-item"><div class="rotulo">Unidade Federativa</div><div class="valor">São Paulo — SP</div></div>
+      <div class="contexto-item"><div class="rotulo">Fonte dos Dados</div><div class="valor">DATASUS / IBGE</div></div>
+      <div class="contexto-item"><div class="rotulo">Ano de Referência</div><div class="valor">2025</div></div>
+    </div>
+  </header>
+ 
+  <section class="resumo-section">
+    <div class="secao-titulo">Resumo executivo</div>
+    <div class="resumo-grid">
+
+      <div class="resumo-card c-azul">
+        <div class="resumo-rotulo">População total do estado</div>
+        <div class="resumo-valor">46.081.801</div>
+        <div class="resumo-detalhe">Soma de todas as 62 regiões de saúde · SP · 2025</div>
+      </div>
+
+      <div class="resumo-card c-verde">
+        <div class="resumo-rotulo">Região mais populosa</div>
+        <div class="resumo-valor" style="font-size:17px; padding-top:4px">São Paulo</div>
+        <div class="resumo-detalhe">11.904.961 habitantes</div>
+      </div>
+
+      <div class="resumo-card c-dourado">
+        <div class="resumo-rotulo">Faixa etária predominante</div>
+        <div class="resumo-valor" style="font-size:17px; padding-top:4px">Adultos (31–50)</div>
+        <div class="resumo-detalhe">30.5% da população total do estado</div>
+      </div>
+
+      <div class="resumo-card c-alerta">
+        <div class="resumo-rotulo">Regiões em alerta de envelhecimento</div>
+        <div class="resumo-valor">11 <span style="font-size:14px; font-weight:400; color:#888">de 62</span></div>
+        <div class="resumo-detalhe">Regiões com índice de envelhecimento ≥ 100</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="descricao-section">
+    <div class="secao-titulo">Sobre este relatório</div>
+    <p class="descricao-texto">
+      Este relatório apresenta a distribuição da <span class="destaque-inline">população residente</span>
+      no estado de São Paulo, organizada por <span class="destaque-inline">idade simples</span> (ano a ano)
+      e segmentada segundo as <span class="destaque-inline">Regiões de Saúde (CIR)</span> —
+      Comissões Intergestores Regionais definidas pelo Ministério da Saúde.
+      Os dados são provenientes do estudo de estimativas populacionais elaborado em conjunto pelo
+      DATASUS e pelo IBGE, cobrindo o período de 2025.
+      Clique em qualquer linha da tabela para visualizar o gráfico de distribuição por faixa etária.
+    </p>
+  </section>
+ 
+  <section class="grafico-estado-section">
+    <div class="secao-titulo">Visão geral do estado de São Paulo</div>
+    <p class="grafico-estado-descricao">Distribuição total da população por faixa etária — soma de todas as 62 regiões de saúde</p>
+    <div class="grafico-estado-wrapper">
+      <canvas id="grafico-estado"></canvas>
+    </div>
+  </section>
+
+  <section class="ranking-section">
+    <div class="secao-titulo">Ranking de regiões por população total</div>
+    <p class="ranking-descricao">Comparativo entre as 5 regiões mais populosas e as 5 menos populosas do estado</p>
+    <div class="ranking-grid">
+
+      <div class="ranking-card">
+        <div class="ranking-card-header mais">
+          <span class="bolinha"></span>
+          5 regiões mais populosas
+        </div>
+        <table class="rank-table">
+          <tbody>
+            <tr class="rank-linha">
+                <td class="rank-pos" style="color:#1a3557">1º</td>
+                <td class="rank-nome">São Paulo</td>
+                <td class="rank-total">11.904.961</td>
+            </tr>
+            <tr class="rank-linha">
+                <td class="rank-pos" style="color:#1a3557">2º</td>
+                <td class="rank-nome">Região Metropolitana de Campinas</td>
+                <td class="rank-total">3.297.237</td>
+            </tr>
+            <tr class="rank-linha">
+                <td class="rank-pos" style="color:#1a3557">3º</td>
+                <td class="rank-nome">Alto do Tietê</td>
+                <td class="rank-total">3.039.009</td>
+            </tr>
+            <tr class="rank-linha">
+                <td class="rank-pos" style="color:#1a3557">4º</td>
+                <td class="rank-nome">Grande ABC</td>
+                <td class="rank-total">2.792.766</td>
+            </tr>
+            <tr class="rank-linha">
+                <td class="rank-pos" style="color:#1a3557">5º</td>
+                <td class="rank-nome">Rota dos Bandeirantes</td>
+                <td class="rank-total">2.038.754</td>
+            </tr></tbody>
+        </table>
+      </div>
+
+      <div class="ranking-card">
+        <div class="ranking-card-header menos">
+          <span class="bolinha"></span>
+          5 regiões menos populosas
+        </div>
+        <table class="rank-table">
+          <tbody>
+            <tr class="rank-linha">
+                <td class="rank-pos" style="color:#8e5bb5">1º</td>
+                <td class="rank-nome">Santa Fé do Sul</td>
+                <td class="rank-total">54.891</td>
+            </tr>
+            <tr class="rank-linha">
+                <td class="rank-pos" style="color:#8e5bb5">2º</td>
+                <td class="rank-nome">Alto Capivari</td>
+                <td class="rank-total">57.699</td>
+            </tr>
+            <tr class="rank-linha">
+                <td class="rank-pos" style="color:#8e5bb5">3º</td>
+                <td class="rank-nome">Pontal do Paranapanema</td>
+                <td class="rank-total">63.946</td>
+            </tr>
+            <tr class="rank-linha">
+                <td class="rank-pos" style="color:#8e5bb5">4º</td>
+                <td class="rank-nome">Extremo Oeste Paulista</td>
+                <td class="rank-total">89.637</td>
+            </tr>
+            <tr class="rank-linha">
+                <td class="rank-pos" style="color:#8e5bb5">5º</td>
+                <td class="rank-nome">José Bonifácio</td>
+                <td class="rank-total">104.417</td>
+            </tr></tbody>
+        </table>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tabela-section">
+    <div class="secao-titulo">Distribuição por faixa etária e região — clique na linha para ver o gráfico</div>
+    <div class="tabela-controles">
+      <div class="campo-busca">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="campo-busca" placeholder="Buscar região..." oninput="filtrarTabela(this.value)">
+      </div>
+      <button class="btn-exportar" onclick="exportarExcel()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Baixar planilha Excel
+      </button>
+    </div>
+    <div class="tabela-wrapper">
+      <table id="tabela-principal">
+        <thead>
+          <tr>
+            <th class="col-codigo">Código</th>
+            <th class="col-nome ordenavel" onclick="ordenarTabela(1)">Região de Saúde <span class="seta-ordem">⇅</span></th>
+            <th class="ordenavel" onclick="ordenarTabela(2)">Crianças (0–12) <span class="seta-ordem">⇅</span></th>
+            <th class="ordenavel" onclick="ordenarTabela(3)">Adolescentes (13–17) <span class="seta-ordem">⇅</span></th>
+            <th class="ordenavel" onclick="ordenarTabela(4)">Adultos (18–30) <span class="seta-ordem">⇅</span></th>
+            <th class="ordenavel" onclick="ordenarTabela(5)">Adultos (31–50) <span class="seta-ordem">⇅</span></th>
+            <th class="ordenavel" onclick="ordenarTabela(6)">Adultos (51–64) <span class="seta-ordem">⇅</span></th>
+            <th class="ordenavel" onclick="ordenarTabela(7)">Idosos (65+) <span class="seta-ordem">⇅</span></th>
+            <th class="ordenavel" onclick="ordenarTabela(8)">Índice env. <span class="seta-ordem">⇅</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          
+        <tr class="linha-dados"
+            data-nome="Alto do Tietê"
+            data-criancas="533951"
+            data-adolescentes="217492"
+            data-adultos1="590795"
+            data-adultos2="923525"
+            data-adultos3="473304"
+            data-idosos="299942"
+            data-indice="56.2">
+            <td class="col-codigo">35011</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Alto do Tietê</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>533.951</td>
+            <td>217.492</td>
+            <td>590.795</td>
+            <td>923.525</td>
+            <td>473.304</td>
+            <td>299.942</td>
+            <td><span class="badge-indice normal">56.2</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Franco da Rocha"
+            data-criancas="112122"
+            data-adolescentes="44580"
+            data-adultos1="121597"
+            data-adultos2="189834"
+            data-adultos3="91682"
+            data-idosos="56651"
+            data-indice="50.5">
+            <td class="col-codigo">35012</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Franco da Rocha</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>112.122</td>
+            <td>44.580</td>
+            <td>121.597</td>
+            <td>189.834</td>
+            <td>91.682</td>
+            <td>56.651</td>
+            <td><span class="badge-indice normal">50.5</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Mananciais"
+            data-criancas="204618"
+            data-adolescentes="85199"
+            data-adultos1="223917"
+            data-adultos2="362719"
+            data-adultos3="176727"
+            data-idosos="110124"
+            data-indice="53.8">
+            <td class="col-codigo">35013</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Mananciais</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>204.618</td>
+            <td>85.199</td>
+            <td>223.917</td>
+            <td>362.719</td>
+            <td>176.727</td>
+            <td>110.124</td>
+            <td><span class="badge-indice normal">53.8</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Rota dos Bandeirantes"
+            data-criancas="354170"
+            data-adolescentes="144826"
+            data-adultos1="392716"
+            data-adultos2="641982"
+            data-adultos3="310155"
+            data-idosos="194905"
+            data-indice="55.0">
+            <td class="col-codigo">35014</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Rota dos Bandeirantes</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>354.170</td>
+            <td>144.826</td>
+            <td>392.716</td>
+            <td>641.982</td>
+            <td>310.155</td>
+            <td>194.905</td>
+            <td><span class="badge-indice normal">55.0</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Grande ABC"
+            data-criancas="416641"
+            data-adolescentes="177664"
+            data-adultos1="501711"
+            data-adultos2="871535"
+            data-adultos3="474620"
+            data-idosos="350595"
+            data-indice="84.1">
+            <td class="col-codigo">35015</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Grande ABC</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>416.641</td>
+            <td>177.664</td>
+            <td>501.711</td>
+            <td>871.535</td>
+            <td>474.620</td>
+            <td>350.595</td>
+            <td><span class="badge-indice normal">84.1</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="São Paulo"
+            data-criancas="1783615"
+            data-adolescentes="743153"
+            data-adultos1="2240373"
+            data-adultos2="3648483"
+            data-adultos3="1956308"
+            data-idosos="1533029"
+            data-indice="86.0">
+            <td class="col-codigo">35016</td>
+            <td class="col-nome">
+                <span class="nome-regiao">São Paulo</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>1.783.615</td>
+            <td>743.153</td>
+            <td>2.240.373</td>
+            <td>3.648.483</td>
+            <td>1.956.308</td>
+            <td>1.533.029</td>
+            <td><span class="badge-indice normal">86.0</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Central do DRS II"
+            data-criancas="46780"
+            data-adolescentes="19096"
+            data-adultos1="51727"
+            data-adultos2="92885"
+            data-adultos3="54602"
+            data-idosos="43433"
+            data-indice="92.8">
+            <td class="col-codigo">35021</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Central do DRS II</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>46.780</td>
+            <td>19.096</td>
+            <td>51.727</td>
+            <td>92.885</td>
+            <td>54.602</td>
+            <td>43.433</td>
+            <td><span class="badge-indice normal">92.8</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Lagos do DRS II"
+            data-criancas="28261"
+            data-adolescentes="12157"
+            data-adultos1="34101"
+            data-adultos2="61022"
+            data-adultos3="37038"
+            data-idosos="29821"
+            data-indice="105.5">
+            <td class="col-codigo">35022</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Lagos do DRS II</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>28.261</td>
+            <td>12.157</td>
+            <td>34.101</td>
+            <td>61.022</td>
+            <td>37.038</td>
+            <td>29.821</td>
+            <td><span class="badge-indice alerta">105.5</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Consórcios do DRS II"
+            data-criancas="42245"
+            data-adolescentes="17593"
+            data-adultos1="45913"
+            data-adultos2="78659"
+            data-adultos3="48441"
+            data-idosos="38240"
+            data-indice="90.5">
+            <td class="col-codigo">35023</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Consórcios do DRS II</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>42.245</td>
+            <td>17.593</td>
+            <td>45.913</td>
+            <td>78.659</td>
+            <td>48.441</td>
+            <td>38.240</td>
+            <td><span class="badge-indice normal">90.5</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Central do DRS III"
+            data-criancas="50519"
+            data-adolescentes="20756"
+            data-adultos1="58180"
+            data-adultos2="100783"
+            data-adultos3="54550"
+            data-idosos="42353"
+            data-indice="83.8">
+            <td class="col-codigo">35031</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Central do DRS III</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>50.519</td>
+            <td>20.756</td>
+            <td>58.180</td>
+            <td>100.783</td>
+            <td>54.550</td>
+            <td>42.353</td>
+            <td><span class="badge-indice normal">83.8</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Coração do DRS III"
+            data-criancas="62379"
+            data-adolescentes="25501"
+            data-adultos1="75807"
+            data-adultos2="121740"
+            data-adultos3="67067"
+            data-idosos="52931"
+            data-indice="84.9">
+            <td class="col-codigo">35032</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Coração do DRS III</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>62.379</td>
+            <td>25.501</td>
+            <td>75.807</td>
+            <td>121.740</td>
+            <td>67.067</td>
+            <td>52.931</td>
+            <td><span class="badge-indice normal">84.9</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Noroeste do DRS III"
+            data-criancas="45345"
+            data-adolescentes="18607"
+            data-adultos1="50882"
+            data-adultos2="88448"
+            data-adultos3="50971"
+            data-idosos="39754"
+            data-indice="87.7">
+            <td class="col-codigo">35033</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Noroeste do DRS III</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>45.345</td>
+            <td>18.607</td>
+            <td>50.882</td>
+            <td>88.448</td>
+            <td>50.971</td>
+            <td>39.754</td>
+            <td><span class="badge-indice normal">87.7</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Baixada Santista"
+            data-criancas="291942"
+            data-adolescentes="124724"
+            data-adultos1="328695"
+            data-adultos2="542977"
+            data-adultos3="318410"
+            data-idosos="260810"
+            data-indice="89.3">
+            <td class="col-codigo">35041</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Baixada Santista</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>291.942</td>
+            <td>124.724</td>
+            <td>328.695</td>
+            <td>542.977</td>
+            <td>318.410</td>
+            <td>260.810</td>
+            <td><span class="badge-indice normal">89.3</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Norte - Barretos"
+            data-criancas="46822"
+            data-adolescentes="18891"
+            data-adultos1="51812"
+            data-adultos2="89367"
+            data-adultos3="49050"
+            data-idosos="38264"
+            data-indice="81.7">
+            <td class="col-codigo">35051</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Norte - Barretos</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>46.822</td>
+            <td>18.891</td>
+            <td>51.812</td>
+            <td>89.367</td>
+            <td>49.050</td>
+            <td>38.264</td>
+            <td><span class="badge-indice normal">81.7</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Sul - Barretos"
+            data-criancas="22549"
+            data-adolescentes="9015"
+            data-adultos1="25146"
+            data-adultos2="43774"
+            data-adultos3="24756"
+            data-idosos="20535"
+            data-indice="91.1">
+            <td class="col-codigo">35052</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Sul - Barretos</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>22.549</td>
+            <td>9.015</td>
+            <td>25.146</td>
+            <td>43.774</td>
+            <td>24.756</td>
+            <td>20.535</td>
+            <td><span class="badge-indice normal">91.1</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Vale do Jurumirim"
+            data-criancas="51968"
+            data-adolescentes="20952"
+            data-adultos1="55894"
+            data-adultos2="92483"
+            data-adultos3="51235"
+            data-idosos="40293"
+            data-indice="77.5">
+            <td class="col-codigo">35061</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Vale do Jurumirim</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>51.968</td>
+            <td>20.952</td>
+            <td>55.894</td>
+            <td>92.483</td>
+            <td>51.235</td>
+            <td>40.293</td>
+            <td><span class="badge-indice normal">77.5</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Bauru"
+            data-criancas="104520"
+            data-adolescentes="42375"
+            data-adultos1="123170"
+            data-adultos2="201490"
+            data-adultos3="108677"
+            data-idosos="85471"
+            data-indice="81.8">
+            <td class="col-codigo">35062</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Bauru</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>104.520</td>
+            <td>42.375</td>
+            <td>123.170</td>
+            <td>201.490</td>
+            <td>108.677</td>
+            <td>85.471</td>
+            <td><span class="badge-indice normal">81.8</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Polo Cuesta"
+            data-criancas="49789"
+            data-adolescentes="20818"
+            data-adultos1="57399"
+            data-adultos2="91963"
+            data-adultos3="51066"
+            data-idosos="41336"
+            data-indice="83.0">
+            <td class="col-codigo">35063</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Polo Cuesta</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>49.789</td>
+            <td>20.818</td>
+            <td>57.399</td>
+            <td>91.963</td>
+            <td>51.066</td>
+            <td>41.336</td>
+            <td><span class="badge-indice normal">83.0</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Jaú"
+            data-criancas="50851"
+            data-adolescentes="21071"
+            data-adultos1="56641"
+            data-adultos2="98899"
+            data-adultos3="58710"
+            data-idosos="46415"
+            data-indice="91.3">
+            <td class="col-codigo">35064</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Jaú</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>50.851</td>
+            <td>21.071</td>
+            <td>56.641</td>
+            <td>98.899</td>
+            <td>58.710</td>
+            <td>46.415</td>
+            <td><span class="badge-indice normal">91.3</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Lins"
+            data-criancas="25172"
+            data-adolescentes="10464"
+            data-adultos1="27863"
+            data-adultos2="47005"
+            data-adultos3="28043"
+            data-idosos="23038"
+            data-indice="91.5">
+            <td class="col-codigo">35065</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Lins</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>25.172</td>
+            <td>10.464</td>
+            <td>27.863</td>
+            <td>47.005</td>
+            <td>28.043</td>
+            <td>23.038</td>
+            <td><span class="badge-indice normal">91.5</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Bragança"
+            data-criancas="80931"
+            data-adolescentes="32481"
+            data-adultos1="88760"
+            data-adultos2="157556"
+            data-adultos3="86584"
+            data-idosos="69504"
+            data-indice="85.9">
+            <td class="col-codigo">35071</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Bragança</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>80.931</td>
+            <td>32.481</td>
+            <td>88.760</td>
+            <td>157.556</td>
+            <td>86.584</td>
+            <td>69.504</td>
+            <td><span class="badge-indice normal">85.9</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Região Metropolitana de Campinas"
+            data-criancas="515896"
+            data-adolescentes="209264"
+            data-adultos1="598206"
+            data-adultos2="1033991"
+            data-adultos3="540596"
+            data-idosos="399284"
+            data-indice="77.4">
+            <td class="col-codigo">35072</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Região Metropolitana de Campinas</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>515.896</td>
+            <td>209.264</td>
+            <td>598.206</td>
+            <td>1.033.991</td>
+            <td>540.596</td>
+            <td>399.284</td>
+            <td><span class="badge-indice normal">77.4</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Jundiaí"
+            data-criancas="145603"
+            data-adolescentes="57273"
+            data-adultos1="159611"
+            data-adultos2="279935"
+            data-adultos3="137538"
+            data-idosos="101035"
+            data-indice="69.4">
+            <td class="col-codigo">35073</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Jundiaí</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>145.603</td>
+            <td>57.273</td>
+            <td>159.611</td>
+            <td>279.935</td>
+            <td>137.538</td>
+            <td>101.035</td>
+            <td><span class="badge-indice normal">69.4</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Circuito das Águas"
+            data-criancas="19118"
+            data-adolescentes="7876"
+            data-adultos1="22082"
+            data-adultos2="40470"
+            data-adultos3="24118"
+            data-idosos="21513"
+            data-indice="112.5">
+            <td class="col-codigo">35074</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Circuito das Águas</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>19.118</td>
+            <td>7.876</td>
+            <td>22.082</td>
+            <td>40.470</td>
+            <td>24.118</td>
+            <td>21.513</td>
+            <td><span class="badge-indice alerta">112.5</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Três Colinas"
+            data-criancas="72527"
+            data-adolescentes="28765"
+            data-adultos1="81936"
+            data-adultos2="129402"
+            data-adultos3="71867"
+            data-idosos="54125"
+            data-indice="74.6">
+            <td class="col-codigo">35081</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Três Colinas</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>72.527</td>
+            <td>28.765</td>
+            <td>81.936</td>
+            <td>129.402</td>
+            <td>71.867</td>
+            <td>54.125</td>
+            <td><span class="badge-indice normal">74.6</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Alta Anhanguera"
+            data-criancas="23618"
+            data-adolescentes="9987"
+            data-adultos1="27096"
+            data-adultos2="45441"
+            data-adultos3="25862"
+            data-idosos="19500"
+            data-indice="82.6">
+            <td class="col-codigo">35082</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Alta Anhanguera</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>23.618</td>
+            <td>9.987</td>
+            <td>27.096</td>
+            <td>45.441</td>
+            <td>25.862</td>
+            <td>19.500</td>
+            <td><span class="badge-indice normal">82.6</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Alta Mogiana"
+            data-criancas="17706"
+            data-adolescentes="7391"
+            data-adultos1="19992"
+            data-adultos2="32854"
+            data-adultos3="19425"
+            data-idosos="16103"
+            data-indice="90.9">
+            <td class="col-codigo">35083</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Alta Mogiana</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>17.706</td>
+            <td>7.391</td>
+            <td>19.992</td>
+            <td>32.854</td>
+            <td>19.425</td>
+            <td>16.103</td>
+            <td><span class="badge-indice normal">90.9</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Adamantina"
+            data-criancas="17549"
+            data-adolescentes="7299"
+            data-adultos1="23675"
+            data-adultos2="40379"
+            data-adultos3="24210"
+            data-idosos="20690"
+            data-indice="117.9">
+            <td class="col-codigo">35091</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Adamantina</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>17.549</td>
+            <td>7.299</td>
+            <td>23.675</td>
+            <td>40.379</td>
+            <td>24.210</td>
+            <td>20.690</td>
+            <td><span class="badge-indice alerta">117.9</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Assis"
+            data-criancas="37050"
+            data-adolescentes="15520"
+            data-adultos1="41288"
+            data-adultos2="70579"
+            data-adultos3="42405"
+            data-idosos="33717"
+            data-indice="91.0">
+            <td class="col-codigo">35092</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Assis</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>37.050</td>
+            <td>15.520</td>
+            <td>41.288</td>
+            <td>70.579</td>
+            <td>42.405</td>
+            <td>33.717</td>
+            <td><span class="badge-indice normal">91.0</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Marília"
+            data-criancas="63132"
+            data-adolescentes="24841"
+            data-adultos1="68502"
+            data-adultos2="115494"
+            data-adultos3="66939"
+            data-idosos="55630"
+            data-indice="88.1">
+            <td class="col-codigo">35093</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Marília</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>63.132</td>
+            <td>24.841</td>
+            <td>68.502</td>
+            <td>115.494</td>
+            <td>66.939</td>
+            <td>55.630</td>
+            <td><span class="badge-indice normal">88.1</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Ourinhos"
+            data-criancas="38201"
+            data-adolescentes="15796"
+            data-adultos1="41580"
+            data-adultos2="67406"
+            data-adultos3="40425"
+            data-idosos="33095"
+            data-indice="86.6">
+            <td class="col-codigo">35094</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Ourinhos</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>38.201</td>
+            <td>15.796</td>
+            <td>41.580</td>
+            <td>67.406</td>
+            <td>40.425</td>
+            <td>33.095</td>
+            <td><span class="badge-indice normal">86.6</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Tupã"
+            data-criancas="19251"
+            data-adolescentes="7938"
+            data-adultos1="21436"
+            data-adultos2="36159"
+            data-adultos3="23304"
+            data-idosos="20303"
+            data-indice="105.5">
+            <td class="col-codigo">35095</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Tupã</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>19.251</td>
+            <td>7.938</td>
+            <td>21.436</td>
+            <td>36.159</td>
+            <td>23.304</td>
+            <td>20.303</td>
+            <td><span class="badge-indice alerta">105.5</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Araras"
+            data-criancas="54812"
+            data-adolescentes="22240"
+            data-adultos1="61613"
+            data-adultos2="105006"
+            data-adultos3="57660"
+            data-idosos="45051"
+            data-indice="82.2">
+            <td class="col-codigo">35101</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Araras</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>54.812</td>
+            <td>22.240</td>
+            <td>61.613</td>
+            <td>105.006</td>
+            <td>57.660</td>
+            <td>45.051</td>
+            <td><span class="badge-indice normal">82.2</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Limeira"
+            data-criancas="56821"
+            data-adolescentes="23142"
+            data-adultos1="67998"
+            data-adultos2="113576"
+            data-adultos3="61942"
+            data-idosos="45860"
+            data-indice="80.7">
+            <td class="col-codigo">35102</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Limeira</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>56.821</td>
+            <td>23.142</td>
+            <td>67.998</td>
+            <td>113.576</td>
+            <td>61.942</td>
+            <td>45.860</td>
+            <td><span class="badge-indice normal">80.7</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Piracicaba"
+            data-criancas="99185"
+            data-adolescentes="40111"
+            data-adultos1="113848"
+            data-adultos2="194068"
+            data-adultos3="101217"
+            data-idosos="79559"
+            data-indice="80.2">
+            <td class="col-codigo">35103</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Piracicaba</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>99.185</td>
+            <td>40.111</td>
+            <td>113.848</td>
+            <td>194.068</td>
+            <td>101.217</td>
+            <td>79.559</td>
+            <td><span class="badge-indice normal">80.2</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Rio Claro"
+            data-criancas="41222"
+            data-adolescentes="16929"
+            data-adultos1="49497"
+            data-adultos2="81488"
+            data-adultos3="43331"
+            data-idosos="33519"
+            data-indice="81.3">
+            <td class="col-codigo">35104</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Rio Claro</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>41.222</td>
+            <td>16.929</td>
+            <td>49.497</td>
+            <td>81.488</td>
+            <td>43.331</td>
+            <td>33.519</td>
+            <td><span class="badge-indice normal">81.3</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Alta Paulista"
+            data-criancas="20268"
+            data-adolescentes="8248"
+            data-adultos1="22445"
+            data-adultos2="39885"
+            data-adultos3="24108"
+            data-idosos="20768"
+            data-indice="102.5">
+            <td class="col-codigo">35111</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Alta Paulista</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>20.268</td>
+            <td>8.248</td>
+            <td>22.445</td>
+            <td>39.885</td>
+            <td>24.108</td>
+            <td>20.768</td>
+            <td><span class="badge-indice alerta">102.5</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Alta Sorocabana"
+            data-criancas="64354"
+            data-adolescentes="25819"
+            data-adultos1="73295"
+            data-adultos2="120799"
+            data-adultos3="75181"
+            data-idosos="59607"
+            data-indice="92.6">
+            <td class="col-codigo">35112</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Alta Sorocabana</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>64.354</td>
+            <td>25.819</td>
+            <td>73.295</td>
+            <td>120.799</td>
+            <td>75.181</td>
+            <td>59.607</td>
+            <td><span class="badge-indice normal">92.6</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Alto Capivari"
+            data-criancas="9462"
+            data-adolescentes="3865"
+            data-adultos1="9662"
+            data-adultos2="16230"
+            data-adultos3="10584"
+            data-idosos="7896"
+            data-indice="83.4">
+            <td class="col-codigo">35113</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Alto Capivari</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>9.462</td>
+            <td>3.865</td>
+            <td>9.662</td>
+            <td>16.230</td>
+            <td>10.584</td>
+            <td>7.896</td>
+            <td><span class="badge-indice normal">83.4</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Extremo Oeste Paulista"
+            data-criancas="12574"
+            data-adolescentes="5508"
+            data-adultos1="14987"
+            data-adultos2="25496"
+            data-adultos3="17401"
+            data-idosos="13671"
+            data-indice="108.7">
+            <td class="col-codigo">35114</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Extremo Oeste Paulista</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>12.574</td>
+            <td>5.508</td>
+            <td>14.987</td>
+            <td>25.496</td>
+            <td>17.401</td>
+            <td>13.671</td>
+            <td><span class="badge-indice alerta">108.7</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Pontal do Paranapanema"
+            data-criancas="10449"
+            data-adolescentes="4441"
+            data-adultos1="10188"
+            data-adultos2="17611"
+            data-adultos3="12346"
+            data-idosos="8911"
+            data-indice="85.3">
+            <td class="col-codigo">35115</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Pontal do Paranapanema</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>10.449</td>
+            <td>4.441</td>
+            <td>10.188</td>
+            <td>17.611</td>
+            <td>12.346</td>
+            <td>8.911</td>
+            <td><span class="badge-indice normal">85.3</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Vale do Ribeira"
+            data-criancas="49203"
+            data-adolescentes="20494"
+            data-adultos1="48066"
+            data-adultos2="78799"
+            data-adultos3="48224"
+            data-idosos="39024"
+            data-indice="79.3">
+            <td class="col-codigo">35121</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Vale do Ribeira</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>49.203</td>
+            <td>20.494</td>
+            <td>48.066</td>
+            <td>78.799</td>
+            <td>48.224</td>
+            <td>39.024</td>
+            <td><span class="badge-indice normal">79.3</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Horizonte Verde"
+            data-criancas="69129"
+            data-adolescentes="28383"
+            data-adultos1="78914"
+            data-adultos2="131264"
+            data-adultos3="68768"
+            data-idosos="49641"
+            data-indice="71.8">
+            <td class="col-codigo">35131</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Horizonte Verde</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>69.129</td>
+            <td>28.383</td>
+            <td>78.914</td>
+            <td>131.264</td>
+            <td>68.768</td>
+            <td>49.641</td>
+            <td><span class="badge-indice normal">71.8</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Aquífero Guarani"
+            data-criancas="146290"
+            data-adolescentes="59453"
+            data-adultos1="180282"
+            data-adultos2="299996"
+            data-adultos3="149484"
+            data-idosos="118558"
+            data-indice="81.0">
+            <td class="col-codigo">35132</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Aquífero Guarani</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>146.290</td>
+            <td>59.453</td>
+            <td>180.282</td>
+            <td>299.996</td>
+            <td>149.484</td>
+            <td>118.558</td>
+            <td><span class="badge-indice normal">81.0</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Vale das Cachoeiras"
+            data-criancas="22398"
+            data-adolescentes="9073"
+            data-adultos1="24681"
+            data-adultos2="40695"
+            data-adultos3="23020"
+            data-idosos="19778"
+            data-indice="88.3">
+            <td class="col-codigo">35133</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Vale das Cachoeiras</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>22.398</td>
+            <td>9.073</td>
+            <td>24.681</td>
+            <td>40.695</td>
+            <td>23.020</td>
+            <td>19.778</td>
+            <td><span class="badge-indice normal">88.3</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Baixa Mogiana"
+            data-criancas="52573"
+            data-adolescentes="21132"
+            data-adultos1="59137"
+            data-adultos2="104578"
+            data-adultos3="58573"
+            data-idosos="45714"
+            data-indice="87.0">
+            <td class="col-codigo">35141</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Baixa Mogiana</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>52.573</td>
+            <td>21.132</td>
+            <td>59.137</td>
+            <td>104.578</td>
+            <td>58.573</td>
+            <td>45.714</td>
+            <td><span class="badge-indice normal">87.0</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Mantiqueira"
+            data-criancas="41697"
+            data-adolescentes="17110"
+            data-adultos1="47659"
+            data-adultos2="80750"
+            data-adultos3="48960"
+            data-idosos="39501"
+            data-indice="94.7">
+            <td class="col-codigo">35142</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Mantiqueira</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>41.697</td>
+            <td>17.110</td>
+            <td>47.659</td>
+            <td>80.750</td>
+            <td>48.960</td>
+            <td>39.501</td>
+            <td><span class="badge-indice normal">94.7</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Rio Pardo"
+            data-criancas="31298"
+            data-adolescentes="12934"
+            data-adultos1="35310"
+            data-adultos2="61290"
+            data-adultos3="37269"
+            data-idosos="32568"
+            data-indice="104.1">
+            <td class="col-codigo">35143</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Rio Pardo</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>31.298</td>
+            <td>12.934</td>
+            <td>35.310</td>
+            <td>61.290</td>
+            <td>37.269</td>
+            <td>32.568</td>
+            <td><span class="badge-indice alerta">104.1</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Catanduva"
+            data-criancas="45385"
+            data-adolescentes="19114"
+            data-adultos1="50950"
+            data-adultos2="90945"
+            data-adultos3="53987"
+            data-idosos="45123"
+            data-indice="99.4">
+            <td class="col-codigo">35151</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Catanduva</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>45.385</td>
+            <td>19.114</td>
+            <td>50.950</td>
+            <td>90.945</td>
+            <td>53.987</td>
+            <td>45.123</td>
+            <td><span class="badge-indice normal">99.4</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Santa Fé do Sul"
+            data-criancas="8503"
+            data-adolescentes="3306"
+            data-adultos1="8912"
+            data-adultos2="15481"
+            data-adultos3="9835"
+            data-idosos="8854"
+            data-indice="104.1">
+            <td class="col-codigo">35152</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Santa Fé do Sul</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>8.503</td>
+            <td>3.306</td>
+            <td>8.912</td>
+            <td>15.481</td>
+            <td>9.835</td>
+            <td>8.854</td>
+            <td><span class="badge-indice alerta">104.1</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Jales"
+            data-criancas="14751"
+            data-adolescentes="6224"
+            data-adultos1="16196"
+            data-adultos2="29402"
+            data-adultos3="20205"
+            data-idosos="17700"
+            data-indice="120.0">
+            <td class="col-codigo">35153</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Jales</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>14.751</td>
+            <td>6.224</td>
+            <td>16.196</td>
+            <td>29.402</td>
+            <td>20.205</td>
+            <td>17.700</td>
+            <td><span class="badge-indice alerta">120.0</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Fernandópolis"
+            data-criancas="18436"
+            data-adolescentes="7631"
+            data-adultos1="20798"
+            data-adultos2="35978"
+            data-adultos3="22461"
+            data-idosos="19865"
+            data-indice="107.8">
+            <td class="col-codigo">35154</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Fernandópolis</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>18.436</td>
+            <td>7.631</td>
+            <td>20.798</td>
+            <td>35.978</td>
+            <td>22.461</td>
+            <td>19.865</td>
+            <td><span class="badge-indice alerta">107.8</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="São José do Rio Preto"
+            data-criancas="125173"
+            data-adolescentes="49248"
+            data-adultos1="142019"
+            data-adultos2="244483"
+            data-adultos3="132142"
+            data-idosos="106353"
+            data-indice="85.0">
+            <td class="col-codigo">35155</td>
+            <td class="col-nome">
+                <span class="nome-regiao">São José do Rio Preto</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>125.173</td>
+            <td>49.248</td>
+            <td>142.019</td>
+            <td>244.483</td>
+            <td>132.142</td>
+            <td>106.353</td>
+            <td><span class="badge-indice normal">85.0</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="José Bonifácio"
+            data-criancas="17026"
+            data-adolescentes="6874"
+            data-adultos1="18338"
+            data-adultos2="30624"
+            data-adultos3="17470"
+            data-idosos="14085"
+            data-indice="82.7">
+            <td class="col-codigo">35156</td>
+            <td class="col-nome">
+                <span class="nome-regiao">José Bonifácio</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>17.026</td>
+            <td>6.874</td>
+            <td>18.338</td>
+            <td>30.624</td>
+            <td>17.470</td>
+            <td>14.085</td>
+            <td><span class="badge-indice normal">82.7</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Votuporanga"
+            data-criancas="30283"
+            data-adolescentes="12289"
+            data-adultos1="34271"
+            data-adultos2="59534"
+            data-adultos3="35699"
+            data-idosos="31698"
+            data-indice="104.7">
+            <td class="col-codigo">35157</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Votuporanga</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>30.283</td>
+            <td>12.289</td>
+            <td>34.271</td>
+            <td>59.534</td>
+            <td>35.699</td>
+            <td>31.698</td>
+            <td><span class="badge-indice alerta">104.7</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Itapetininga"
+            data-criancas="85914"
+            data-adolescentes="35023"
+            data-adultos1="96634"
+            data-adultos2="153487"
+            data-adultos3="81370"
+            data-idosos="61435"
+            data-indice="71.5">
+            <td class="col-codigo">35161</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Itapetininga</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>85.914</td>
+            <td>35.023</td>
+            <td>96.634</td>
+            <td>153.487</td>
+            <td>81.370</td>
+            <td>61.435</td>
+            <td><span class="badge-indice normal">71.5</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Itapeva"
+            data-criancas="49697"
+            data-adolescentes="19738"
+            data-adultos1="52105"
+            data-adultos2="80708"
+            data-adultos3="44903"
+            data-idosos="31839"
+            data-indice="64.1">
+            <td class="col-codigo">35162</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Itapeva</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>49.697</td>
+            <td>19.738</td>
+            <td>52.105</td>
+            <td>80.708</td>
+            <td>44.903</td>
+            <td>31.839</td>
+            <td><span class="badge-indice normal">64.1</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Sorocaba"
+            data-criancas="309384"
+            data-adolescentes="122266"
+            data-adultos1="341328"
+            data-adultos2="573627"
+            data-adultos3="298084"
+            data-idosos="214432"
+            data-indice="69.3">
+            <td class="col-codigo">35163</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Sorocaba</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>309.384</td>
+            <td>122.266</td>
+            <td>341.328</td>
+            <td>573.627</td>
+            <td>298.084</td>
+            <td>214.432</td>
+            <td><span class="badge-indice normal">69.3</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Alto Vale do Paraíba"
+            data-criancas="184035"
+            data-adolescentes="74938"
+            data-adultos1="200995"
+            data-adultos2="346062"
+            data-adultos3="185498"
+            data-idosos="140551"
+            data-indice="76.4">
+            <td class="col-codigo">35171</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Alto Vale do Paraíba</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>184.035</td>
+            <td>74.938</td>
+            <td>200.995</td>
+            <td>346.062</td>
+            <td>185.498</td>
+            <td>140.551</td>
+            <td><span class="badge-indice normal">76.4</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Circuito da Fé e Vale Histórico"
+            data-criancas="73792"
+            data-adolescentes="30335"
+            data-adultos1="81448"
+            data-adultos2="135840"
+            data-adultos3="81350"
+            data-idosos="63428"
+            data-indice="86.0">
+            <td class="col-codigo">35172</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Circuito da Fé e Vale Histórico</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>73.792</td>
+            <td>30.335</td>
+            <td>81.448</td>
+            <td>135.840</td>
+            <td>81.350</td>
+            <td>63.428</td>
+            <td><span class="badge-indice normal">86.0</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Litoral Norte"
+            data-criancas="63234"
+            data-adolescentes="25266"
+            data-adultos1="65995"
+            data-adultos2="110289"
+            data-adultos3="56684"
+            data-idosos="38715"
+            data-indice="61.2">
+            <td class="col-codigo">35173</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Litoral Norte</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>63.234</td>
+            <td>25.266</td>
+            <td>65.995</td>
+            <td>110.289</td>
+            <td>56.684</td>
+            <td>38.715</td>
+            <td><span class="badge-indice normal">61.2</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        <tr class="linha-dados"
+            data-nome="Vale do Paraíba/Região Serrana"
+            data-criancas="103610"
+            data-adolescentes="41799"
+            data-adultos1="114445"
+            data-adultos2="195582"
+            data-adultos3="106879"
+            data-idosos="80910"
+            data-indice="78.1">
+            <td class="col-codigo">35174</td>
+            <td class="col-nome">
+                <span class="nome-regiao">Vale do Paraíba/Região Serrana</span>
+                <span class="icone-seta">&#9658;</span>
+            </td>
+            <td>103.610</td>
+            <td>41.799</td>
+            <td>114.445</td>
+            <td>195.582</td>
+            <td>106.879</td>
+            <td>80.910</td>
+            <td><span class="badge-indice normal">78.1</span></td>
+        </tr>
+        <tr class="linha-grafico">
+            <td colspan="9">
+                <div class="grafico-container">
+                    <canvas class="grafico-canvas"></canvas>
+                </div>
+            </td>
+        </tr>
+        </tbody>
+      </table>
+      <p class="sem-resultado" id="sem-resultado">Nenhuma região encontrada para "<span id="termo-busca"></span>"</p>
+    </div>
+    <p class="rodape-tabela">Fonte: DATASUS — Estimativas Populacionais por Município e Idade · Valores absolutos</p>
+    <p class="legenda-indice">
+      <span class="badge-indice normal">ex: 85,0</span> Índice &lt; 100 — mais crianças que idosos &nbsp;·&nbsp;
+      <span class="badge-indice alerta">ex: 120,0</span> Índice ≥ 100 — mais idosos que crianças (alerta de envelhecimento) &nbsp;·&nbsp;
+      Fórmula: (Idosos ÷ Crianças) × 100
+    </p>
+  </section>
+ 
+  <footer class="rodape-header">
+    <span>Relatório gerado automaticamente a partir de dados públicos</span>
+    <span>DATASUS · Estimativas Populacionais · SP · 2025</span>
+  </footer>
+ 
+  <script>
+    // ── Busca em tempo real ──────────────────────────────────────
+    function filtrarTabela(termo) {
+      const t = termo.toLowerCase().trim();
+      let visiveis = 0;
+      document.querySelectorAll('tr.linha-dados').forEach(function(tr) {
+        const nome = tr.dataset.nome.toLowerCase();
+        const bate = nome.includes(t);
+        tr.style.display = bate ? '' : 'none';
+        // fecha gráfico se a linha for escondida
+        if (!bate) {
+          const lg = tr.nextElementSibling;
+          tr.classList.remove('aberta');
+          lg.classList.remove('visivel');
+          lg.style.display = 'none';
+        }
+        tr.nextElementSibling.style.display = bate && tr.nextElementSibling.classList.contains('visivel') ? 'table-row' : (bate ? '' : 'none');
+        if (bate) visiveis++;
+      });
+      const semRes = document.getElementById('sem-resultado');
+      document.getElementById('termo-busca').textContent = termo;
+      semRes.style.display = visiveis === 0 && t !== '' ? 'block' : 'none';
+    }
+
+    // ── Ordenação por coluna ─────────────────────────────────────
+    let ultimaColuna = -1;
+    let ordemAsc = true;
+
+    function ordenarTabela(colIdx) {
+      const tbody = document.querySelector('#tabela-principal tbody');
+
+      // Coleta pares: [linha-dados, linha-grafico]
+      const pares = [];
+      const rows = Array.from(tbody.querySelectorAll('tr.linha-dados'));
+      rows.forEach(function(tr) {
+        pares.push([tr, tr.nextElementSibling]);
+      });
+
+      // Determina direção
+      if (ultimaColuna === colIdx) {
+        ordemAsc = !ordemAsc;
+      } else {
+        ordemAsc = true;
+        ultimaColuna = colIdx;
+      }
+
+      // Atualiza ícones nos cabeçalhos
+      document.querySelectorAll('thead th.ordenavel').forEach(function(th) {
+        th.classList.remove('asc', 'desc');
+        th.querySelector('.seta-ordem').textContent = '⇅';
+      });
+      const thAtivo = document.querySelectorAll('thead th.ordenavel')[colIdx - 1];
+      thAtivo.classList.add(ordemAsc ? 'asc' : 'desc');
+      thAtivo.querySelector('.seta-ordem').textContent = ordemAsc ? '▲' : '▼';
+
+      // Ordena
+      pares.sort(function(a, b) {
+        let va, vb;
+        if (colIdx === 1) {
+          va = a[0].dataset.nome;
+          vb = b[0].dataset.nome;
+          return ordemAsc ? va.localeCompare(vb, 'pt-BR') : vb.localeCompare(va, 'pt-BR');
+        }
+        const mapa = {2:'criancas', 3:'adolescentes', 4:'adultos1', 5:'adultos2', 6:'adultos3', 7:'idosos', 8:'indice'};
+        va = parseFloat(a[0].dataset[mapa[colIdx]]);
+        vb = parseFloat(b[0].dataset[mapa[colIdx]]);
+        return ordemAsc ? va - vb : vb - va;
+      });
+
+      // Reinsere na ordem certa e fecha gráficos abertos
+      if (graficoAtivo) { graficoAtivo.destroy(); graficoAtivo = null; }
+      pares.forEach(function(par) {
+        par[0].classList.remove('aberta');
+        par[1].classList.remove('visivel');
+        par[1].style.display = 'none';
+        tbody.appendChild(par[0]);
+        tbody.appendChild(par[1]);
+      });
+    }
+
+    // ── Exportar para Excel ──────────────────────────────────────
+    function exportarExcel() {
+      // Coleta os dados de cada linha (lê os data-* para ter números puros, sem formatação)
+      const linhas = [];
+      document.querySelectorAll('tr.linha-dados').forEach(function(tr) {
+        linhas.push({
+          'Código':               tr.querySelector('.col-codigo').textContent.trim(),
+          'Região de Saúde':      tr.dataset.nome,
+          'Crianças (0–12)':      parseInt(tr.dataset.criancas),
+          'Adolescentes (13–17)': parseInt(tr.dataset.adolescentes),
+          'Adultos (18–30)':      parseInt(tr.dataset.adultos1),
+          'Adultos (31–50)':      parseInt(tr.dataset.adultos2),
+          'Adultos (51–64)':      parseInt(tr.dataset.adultos3),
+          'Idosos (65+)':         parseInt(tr.dataset.idosos),
+        });
+      });
+ 
+      // Cria a planilha com o SheetJS
+      const planilha  = XLSX.utils.json_to_sheet(linhas);
+      const workbook  = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, planilha, 'Regiões de Saúde');
+ 
+      // Dispara o download
+      XLSX.writeFile(workbook, 'populacao_regioes_sp_2025.xlsx');
+    }
+ 
+    // ── Gráfico geral do estado ──────────────────────────────────
+    const totaisEstado = {
+      labels: [
+        'Crianças (0–12)',
+        'Adolescentes (13–17)',
+        'Adultos (18–30)',
+        'Adultos (31–50)',
+        'Adultos (51–64)',
+        'Idosos (65+)',
+      ],
+      valores: [
+        7285799,
+        2992298,
+        8450519,
+        14052812,
+        7573320,
+        5727053,
+      ],
+      cores: [
+        '#2a7fc9',
+        '#3aaa7a',
+        '#e8a020',
+        '#d95f3b',
+        '#8e5bb5',
+        '#4a7c9e',
+      ]
+    };
+
+    new Chart(document.getElementById('grafico-estado'), {
+      type: 'bar',
+      data: {
+        labels: totaisEstado.labels,
+        datasets: [{
+          data: totaisEstado.valores,
+          backgroundColor: totaisEstado.cores,
+          borderRadius: 5,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                return ' ' + ctx.raw.toLocaleString('pt-BR');
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(0,0,0,0.05)' },
+            ticks: {
+              font: { size: 11 },
+              callback: function(v) {
+                if (v >= 1000000) return (v / 1000000).toFixed(1) + 'M';
+                if (v >= 1000) return (v / 1000).toFixed(0) + 'k';
+                return v;
+              }
+            }
+          },
+          y: {
+            grid: { display: false },
+            ticks: { font: { size: 13 }, color: '#444' }
+          }
+        }
+      }
+    });
+
+    // Guarda referência ao gráfico aberto para destruir antes de criar outro
+    let graficoAtivo = null;
+ 
+    // Cores de cada faixa etária
+    const cores = [
+      '#2a7fc9',
+      '#3aaa7a',
+      '#e8a020',
+      '#d95f3b',
+      '#8e5bb5',
+      '#4a7c9e',
+    ];
+ 
+    document.querySelectorAll('tr.linha-dados').forEach(function(tr) {
+      tr.addEventListener('click', function() {
+        const linhaGrafico = tr.nextElementSibling;
+        const jaAberta = tr.classList.contains('aberta');
+ 
+        // Fecha tudo que estiver aberto
+        document.querySelectorAll('tr.linha-dados.aberta').forEach(function(outra) {
+          outra.classList.remove('aberta');
+          outra.nextElementSibling.classList.remove('visivel');
+          outra.nextElementSibling.style.display = 'none';
+        });
+        if (graficoAtivo) {
+          graficoAtivo.destroy();
+          graficoAtivo = null;
+        }
+ 
+        // Se já estava aberta, só fecha (toggle)
+        if (jaAberta) return;
+ 
+        // Abre a linha do gráfico
+        tr.classList.add('aberta');
+        linhaGrafico.style.display = 'table-row';
+        linhaGrafico.classList.add('visivel');
+ 
+        // Lê os dados dos atributos data-* da linha clicada
+        const valores = [
+          parseInt(tr.dataset.criancas),
+          parseInt(tr.dataset.adolescentes),
+          parseInt(tr.dataset.adultos1),
+          parseInt(tr.dataset.adultos2),
+          parseInt(tr.dataset.adultos3),
+          parseInt(tr.dataset.idosos),
+        ];
+ 
+        const labels = [
+          'Crianças (0–12)',
+          'Adolescentes (13–17)',
+          'Adultos (18–30)',
+          'Adultos (31–50)',
+          'Adultos (51–64)',
+          'Idosos (65+)',
+        ];
+ 
+        const canvas = linhaGrafico.querySelector('canvas');
+        graficoAtivo = new Chart(canvas, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              data: valores,
+              backgroundColor: cores,
+              borderRadius: 4,
+              borderSkipped: false,
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(ctx) {
+                    return ' ' + ctx.raw.toLocaleString('pt-BR');
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: { color: 'rgba(0,0,0,0.05)' },
+                ticks: {
+                  font: { size: 11 },
+                  callback: function(v) {
+                    if (v >= 1000000) return (v / 1000000).toFixed(1) + 'M';
+                    if (v >= 1000) return (v / 1000).toFixed(0) + 'k';
+                    return v;
+                  }
+                }
+              },
+              y: {
+                grid: { display: false },
+                ticks: { font: { size: 12 } }
+              }
+            }
+          }
+        });
+      });
+    });
+  </script>
+ 
+</body>
+</html>
